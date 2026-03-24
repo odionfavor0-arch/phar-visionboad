@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phasr — Visualize. Plan. Achieve.</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05050a;--bg2:#0d0d16;--bg3:#12121f;--accent:#e8407a;--accent2:#f472a8;--accent3:#fbb6ce;--text:#f0eeff;--muted:#8b85aa;--border:rgba(232,64,122,0.18);--glow:0 0 40px rgba(232,64,122,0.25);--r:16px;--t:0.3s cubic-bezier(.4,0,.2,1)}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.page{display:none}.page.active{display:block}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;transition:all var(--t);border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(5,5,10,0.9);backdrop-filter:blur(20px);border-color:var(--border)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;background:linear-gradient(135deg,#f472a8,#ffd6e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer}
+.nav-links{display:flex;align-items:center;gap:2rem}
+.nav-links a{color:var(--muted);font-size:.9rem;text-decoration:none;transition:color var(--t);cursor:pointer}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{padding:.5rem 1.3rem;border-radius:99px;background:var(--accent);color:#fff!important;font-weight:600;font-size:.85rem;cursor:pointer}
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8rem 1.5rem 4rem;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(232,64,122,0.18) 0%,transparent 60%),var(--bg)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(232,64,122,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(232,64,122,0.05) 1px,transparent 1px);background-size:60px 60px}
+.hero-content{position:relative;z-index:1;max-width:860px}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border-radius:99px;border:1px solid var(--border);background:rgba(232,64,122,0.08);font-size:.8rem;font-weight:500;color:var(--accent3);margin-bottom:1.8rem}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(2.8rem,7vw,5.5rem);font-weight:800;line-height:1.05;margin-bottom:1.5rem}
+.hero h1 span{background:linear-gradient(135deg,var(--accent2) 0%,#ffd6e7 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(1rem,2.5vw,1.2rem);color:var(--muted);line-height:1.7;max-width:580px;margin:0 auto 2.5rem}
+.hero-form{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem}
+.hero-input{padding:.8rem 1.4rem;border-radius:99px;border:1.5px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:.95rem;outline:none;width:280px;font-family:'Outfit',sans-serif}
+.hero-input::placeholder{color:var(--muted)}
+.btn-primary{padding:.8rem 2rem;border-radius:99px;border:none;background:linear-gradient(135deg,var(--accent),#f472a8);color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif;box-shadow:0 4px 20px rgba(232,64,122,0.4)}
+.btn-primary:hover{transform:translateY(-2px)}
+.hero-note{font-size:.8rem;color:var(--muted)}
+.strip{padding:1.8rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(232,64,122,0.04)}
+.strip-inner{display:flex;gap:1.2rem;justify-content:center;flex-wrap:wrap;padding:0 2rem}
+.strip-pill{display:flex;align-items:center;gap:.45rem;padding:.45rem 1.1rem;border-radius:99px;border:1px solid var(--border);font-size:.82rem;font-weight:500;color:var(--muted);transition:all var(--t)}
+.strip-pill.active{border-color:var(--accent);color:var(--accent3);background:rgba(232,64,122,0.12)}
+section{padding:6rem 1.5rem}
+.sec-inner{max-width:1100px;margin:0 auto}
+.sec-label{font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);margin-bottom:1rem}
+.sec-title{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;margin-bottom:1rem}
+.sec-sub{color:var(--muted);font-size:1rem;line-height:1.7;max-width:540px}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:3.5rem}
+@media(max-width:800px){.feat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.feat-grid{grid-template-columns:1fr}}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.8rem;transition:all var(--t)}
+.feat-card:hover{border-color:rgba(232,64,122,0.4);transform:translateY(-4px);box-shadow:var(--glow)}
+.feat-icon{font-size:1.8rem;margin-bottom:1rem;display:block}
+.feat-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:.5rem}
+.feat-desc{font-size:.88rem;color:var(--muted);line-height:1.6}
+.phases-sec{background:var(--bg2)}
+.phases-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:3rem}
+@media(max-width:700px){.phases-grid{grid-template-columns:1fr 1fr}}
+.phase-card{border-radius:var(--r);padding:1.5rem;border:1px solid var(--border);position:relative;overflow:hidden}
+.phase-card::before{content:attr(data-n);position:absolute;top:-10px;right:10px;font-family:'Syne',sans-serif;font-size:5rem;font-weight:800;color:rgba(232,64,122,0.07);line-height:1;pointer-events:none}
+.phase-card:nth-child(1){background:linear-gradient(135deg,rgba(232,64,122,0.12),rgba(232,64,122,0.04))}
+.phase-card:nth-child(2){background:linear-gradient(135deg,rgba(244,114,168,0.12),rgba(244,114,168,0.04))}
+.phase-card:nth-child(3){background:linear-gradient(135deg,rgba(251,182,206,0.10),rgba(251,182,206,0.02))}
+.phase-card:nth-child(4){background:linear-gradient(135deg,rgba(255,182,193,0.10),rgba(255,182,193,0.02))}
+.phase-n{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);margin-bottom:.5rem}
+.phase-name{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:.5rem}
+.phase-desc{font-size:.82rem;color:var(--muted);line-height:1.5}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:3.5rem}
+@media(max-width:700px){.testi-grid{grid-template-columns:1fr}}
+.testi-card{background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);padding:1.8rem}
+.testi-text{font-size:.92rem;color:var(--text);line-height:1.7;margin-bottom:1.2rem;font-style:italic}
+.testi-author{display:flex;align-items:center;gap:.75rem}
+.testi-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff;flex-shrink:0}
+.testi-name{font-weight:600;font-size:.88rem}
+.testi-role{font-size:.75rem;color:var(--muted)}
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:3.5rem;align-items:start}
+@media(max-width:700px){.price-grid{grid-template-columns:1fr}}
+.price-card{background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);padding:2rem;position:relative;transition:all var(--t)}
+.price-card.hot{background:linear-gradient(135deg,rgba(232,64,122,0.15),rgba(244,114,168,0.08));border-color:var(--accent);box-shadow:var(--glow);transform:scale(1.03)}
+.price-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;padding:.25rem 1rem;border-radius:99px;white-space:nowrap}
+.price-name{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem}
+.price-amount{font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;line-height:1;margin-bottom:.3rem}
+.price-period{font-size:.82rem;color:var(--muted);margin-bottom:1.5rem}
+.price-div{height:1px;background:var(--border);margin:1.2rem 0}
+.price-feats{list-style:none;display:flex;flex-direction:column;gap:.7rem;margin-bottom:1.8rem}
+.price-feats li{font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.price-feats li::before{content:'✓';color:var(--accent2);font-weight:700;flex-shrink:0}
+.btn-outline{width:100%;padding:.8rem;border-radius:99px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-size:.9rem;font-weight:600;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent3)}
+.btn-pf{width:100%;padding:.8rem;border-radius:99px;border:none;background:linear-gradient(135deg,var(--accent),#f472a8);color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif;box-shadow:0 4px 20px rgba(232,64,122,0.3)}
+.btn-pf:hover{transform:translateY(-2px)}
+.cta-sec{text-align:center;padding:7rem 1.5rem;position:relative;overflow:hidden}
+.cta-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 50%,rgba(232,64,122,0.15) 0%,transparent 60%)}
+.cta-sec .sec-inner{position:relative;z-index:1}
+.cta-sec h2{font-family:'Syne',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:800;margin-bottom:1rem}
+.cta-sec p{color:var(--muted);font-size:1.05rem;margin-bottom:2.5rem}
+footer{border-top:1px solid var(--border);padding:3rem 1.5rem;text-align:center}
+.foot-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;background:linear-gradient(135deg,#f472a8,#ffd6e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1.5rem;display:block}
+.foot-links{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem}
+.foot-links a{color:var(--muted);font-size:.85rem;text-decoration:none;transition:color var(--t)}
+.foot-links a:hover{color:var(--text)}
+.foot-copy{font-size:.8rem;color:var(--muted)}
+.auth-wrap{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+@media(max-width:768px){.auth-wrap{grid-template-columns:1fr}.auth-left{display:none}}
+.auth-left{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:space-between;padding:3rem;position:relative;overflow:hidden}
+.auth-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(232,64,122,0.15) 0%,transparent 70%);top:-100px;left:-100px;pointer-events:none}
+.auth-left-title{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;line-height:1.15;margin-bottom:1.2rem;position:relative;z-index:1}
+.auth-left-title span{background:linear-gradient(135deg,var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.auth-left-sub{color:var(--muted);font-size:.95rem;line-height:1.7;margin-bottom:2.5rem;position:relative;z-index:1}
+.auth-feats{display:flex;flex-direction:column;gap:1rem;position:relative;z-index:1}
+.auth-feat{display:flex;align-items:center;gap:.85rem;font-size:.9rem;color:var(--muted)}
+.auth-feat-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:rgba(232,64,122,0.12);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.auth-quote{position:relative;z-index:1;background:rgba(232,64,122,0.06);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.4rem}
+.auth-quote-text{font-size:.88rem;color:var(--text);font-style:italic;line-height:1.6;margin-bottom:.8rem}
+.auth-quote-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff}
+.auth-right{display:flex;align-items:center;justify-content:center;padding:2rem 1.5rem;position:relative}
+.auth-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(232,64,122,0.06) 0%,transparent 60%);pointer-events:none}
+.auth-card{width:100%;max-width:420px;position:relative;z-index:1}
+.auth-card-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:.4rem}
+.auth-card-sub{color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+.auth-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:99px;padding:4px;margin-bottom:2rem}
+.auth-tbtn{flex:1;padding:.6rem;border-radius:99px;border:none;background:transparent;color:var(--muted);font-size:.88rem;font-weight:600;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif}
+.auth-tbtn.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-google{width:100%;padding:.8rem;border-radius:12px;border:1.5px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text);font-size:.9rem;font-weight:500;cursor:pointer;transition:all var(--t);display:flex;align-items:center;justify-content:center;gap:.7rem;font-family:'Outfit',sans-serif;margin-bottom:1.5rem}
+.btn-google:hover{background:rgba(255,255,255,0.07)}
+.auth-div{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;color:var(--muted);font-size:.8rem}
+.auth-div::before,.auth-div::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-form{display:flex;flex-direction:column;gap:1rem}
+.auth-field{display:flex;flex-direction:column;gap:.4rem}
+.auth-label{font-size:.82rem;font-weight:600;color:var(--muted);letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.auth-input{padding:.8rem 1rem;border-radius:12px;border:1.5px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text);font-size:.92rem;outline:none;transition:all var(--t);font-family:'Outfit',sans-serif}
+.auth-input:focus{border-color:var(--accent);background:rgba(232,64,122,0.06)}
+.auth-input::placeholder{color:var(--muted)}
+.auth-forgot{font-size:.8rem;color:var(--accent2);cursor:pointer}
+.btn-submit{width:100%;padding:.9rem;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif;box-shadow:0 4px 20px rgba(232,64,122,0.35);margin-top:.5rem}
+.btn-submit:hover:not(:disabled){transform:translateY(-2px)}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed}
+.auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:.75rem 1rem;font-size:.85rem;color:#fca5a5;margin-bottom:1rem}
+.auth-success{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);border-radius:10px;padding:.75rem 1rem;font-size:.85rem;color:#6ee7b7;margin-bottom:1rem}
+.auth-terms{text-align:center;font-size:.78rem;color:var(--muted);margin-top:1rem;line-height:1.6}
+.auth-terms a{color:var(--accent2);text-decoration:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;animation:spin .7s linear infinite;display:inline-block}
+.vb-topbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(5,5,10,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:.8rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.vb-topbar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;background:linear-gradient(135deg,#f472a8,#ffd6e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.vb-topbar-user{display:flex;align-items:center;gap:1rem;font-size:.85rem;color:var(--muted)}
+.btn-signout{padding:.4rem 1rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer;transition:all var(--t);font-family:'Outfit',sans-serif}
+.btn-signout:hover{border-color:var(--accent);color:var(--accent)}
+.vb-root{min-height:100vh;padding:5rem 1rem 4rem;background:linear-gradient(135deg,#fff5f7 0%,#fce4ec 100%)}
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="page-landing" class="page active">
+  <nav id="nav">
+    <div class="logo">Phasr</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a class="nav-cta" onclick="showPage('auth')">Get Started Free</a>
+    </div>
+  </nav>
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge"><div class="badge-dot"></div> AI-Powered Vision Board Platform</div>
+      <h1>Visualize. Plan.<br/><span>Achieve Everything.</span></h1>
+      <p class="hero-sub">The most structured vision board platform on the internet. Set phased goals, track your transformation — for any goal, any lifestyle.</p>
+      <div class="hero-form">
+        <input class="hero-input" type="email" placeholder="Enter your email..."/>
+        <button class="btn-primary" onclick="showPage('auth')">Start For Free →</button>
+      </div>
+      <p class="hero-note">Free forever · No credit card required</p>
+    </div>
+  </div>
+  <div class="strip"><div class="strip-inner" id="pills">
+    <div class="strip-pill active">🏃 Fitness & Health</div>
+    <div class="strip-pill">💰 Finance & Wealth</div>
+    <div class="strip-pill">💼 Career & Business</div>
+    <div class="strip-pill">✈️ Travel & Adventure</div>
+    <div class="strip-pill">❤️ Relationships</div>
+    <div class="strip-pill">🎨 Creative Goals</div>
+    <div class="strip-pill">📚 Personal Growth</div>
+    <div class="strip-pill">🧘 Mindfulness</div>
+  </div></div>
+  <section id="features"><div class="sec-inner">
+    <p class="sec-label">Everything you need</p>
+    <h2 class="sec-title">Built different.<br/>Built to actually work.</h2>
+    <p class="sec-sub">Most vision board apps are just pretty pictures. Phasr combines AI, structured planning, and real accountability.</p>
+    <div class="feat-grid">
+      <div class="feat-card"><span class="feat-icon">🧠</span><p class="feat-title">AI Life Coach</p><p class="feat-desc">Personalized coaching, goal analysis and daily motivation powered by AI — 24/7.</p></div>
+      <div class="feat-card"><span class="feat-icon">📋</span><p class="feat-title">Phased Planning</p><p class="feat-desc">Break your year into phases. Q1 foundation, Q2 momentum, Q3 scale. Track every step.</p></div>
+      <div class="feat-card"><span class="feat-icon">📸</span><p class="feat-title">Before & After</p><p class="feat-desc">Upload photos, document your transformation, and see how far you've come visually.</p></div>
+      <div class="feat-card"><span class="feat-icon">✍️</span><p class="feat-title">Fully Customisable</p><p class="feat-desc">Add your own pillars, phases, goals and weekly non-negotiables. Your rules.</p></div>
+      <div class="feat-card"><span class="feat-icon">📊</span><p class="feat-title">Progress Analytics</p><p class="feat-desc">Weekly check-ins, completion rates and quarterly reviews to keep you accountable.</p></div>
+      <div class="feat-card"><span class="feat-icon">🌍</span><p class="feat-title">For Everyone</p><p class="feat-desc">Fitness. Finance. Career. Travel. Relationships. Any goal, any lifestyle.</p></div>
+    </div>
+  </div></section>
+  <section class="phases-sec"><div class="sec-inner">
+    <p class="sec-label">How it works</p>
+    <h2 class="sec-title">Your year in phases.<br/>Your goals on track.</h2>
+    <div class="phases-grid">
+      <div class="phase-card" data-n="01"><p class="phase-n">Phase 01</p><p class="phase-name">Foundation</p><p class="phase-desc">Define your vision and establish non-negotiable weekly habits.</p></div>
+      <div class="phase-card" data-n="02"><p class="phase-n">Phase 02</p><p class="phase-name">Momentum</p><p class="phase-desc">Double down on what's working. Build unstoppable momentum.</p></div>
+      <div class="phase-card" data-n="03"><p class="phase-n">Phase 03</p><p class="phase-name">Scale</p><p class="phase-desc">Accelerate results. Your habits are automatic now.</p></div>
+      <div class="phase-card" data-n="04"><p class="phase-n">Phase 04</p><p class="phase-name">Legacy</p><p class="phase-desc">Reflect on your transformation. Set the next vision.</p></div>
+    </div>
+  </div></section>
+  <section><div class="sec-inner">
+    <p class="sec-label">Real results</p>
+    <h2 class="sec-title">People hitting their goals.</h2>
+    <div class="testi-grid">
+      <div class="testi-card"><p class="testi-text">"I hit every Q1 goal I set. The phased approach is what makes this different from any other tool."</p><div class="testi-author"><div class="testi-av">M</div><div><p class="testi-name">Marcus T.</p><p class="testi-role">Entrepreneur</p></div></div></div>
+      <div class="testi-card"><p class="testi-text">"My clients use this to track their transformation journeys. The before/after feature alone is worth it."</p><div class="testi-author"><div class="testi-av">A</div><div><p class="testi-name">Aisha K.</p><p class="testi-role">Fitness Coach</p></div></div></div>
+      <div class="testi-card"><p class="testi-text">"Finally a goal tracker that doesn't feel like a spreadsheet. Beautiful, motivating and actually works."</p><div class="testi-author"><div class="testi-av">J</div><div><p class="testi-name">James R.</p><p class="testi-role">Digital Nomad</p></div></div></div>
+    </div>
+  </div></section>
+  <section id="pricing" style="background:var(--bg2)"><div class="sec-inner">
+    <p class="sec-label">Pricing</p>
+    <h2 class="sec-title">Simple pricing.<br/>Serious results.</h2>
+    <div class="price-grid">
+      <div class="price-card"><p class="price-name">Free</p><p class="price-amount">$0</p><p class="price-period">forever</p><div class="price-div"></div><ul class="price-feats"><li>1 Vision Board</li><li>3 Phases</li><li>Basic Templates</li><li>Weekly Check-ins</li><li>Export as Image</li></ul><button class="btn-outline" onclick="showPage('auth')">Get Started Free</button></div>
+      <div class="price-card hot"><div class="price-badge">⭐ Most Popular</div><p class="price-name">Pro</p><p class="price-amount">$7</p><p class="price-period">per month</p><div class="price-div"></div><ul class="price-feats"><li>Unlimited Boards</li><li>Unlimited Phases</li><li>AI Life Coach</li><li>AI Affirmations</li><li>Cloud Sync</li><li>Before/After Photos</li><li>Advanced Analytics</li></ul><button class="btn-pf" onclick="showPage('auth')">Start 14-Day Free Trial</button></div>
+      <div class="price-card"><p class="price-name">Coach</p><p class="price-amount">$24</p><p class="price-period">per month</p><div class="price-div"></div><ul class="price-feats"><li>Everything in Pro</li><li>Up to 20 Client Boards</li><li>Client Dashboard</li><li>Branded Boards</li><li>Dedicated Support</li></ul><button class="btn-outline" onclick="showPage('auth')">Start Free Trial</button></div>
+    </div>
+  </div></section>
+  <div class="cta-sec"><div class="sec-inner">
+    <h2>Your goals aren't going<br/>to achieve themselves.</h2>
+    <p>Join thousands building structured vision boards that actually work.</p>
+    <button class="btn-primary" style="padding:1rem 2.5rem;font-size:1rem" onclick="showPage('auth')">Create Your Free Board →</button>
+  </div></div>
+  <footer>
+    <span class="foot-logo">Phasr</span>
+    <div class="foot-links"><a href="#">Features</a><a href="#">Pricing</a><a href="#">Blog</a><a href="#">About</a><a href="#">Privacy</a><a href="#">Terms</a></div>
+    <p class="foot-copy">© 2025 Phasr. Built for achievers.</p>
+  </footer>
+</div>
+
+<!-- AUTH -->
+<div id="page-auth" class="page">
+  <div class="auth-wrap">
+    <div class="auth-left">
+      <div class="auth-glow"></div>
+      <div class="logo" onclick="showPage('landing')" style="position:relative;z-index:1">Phasr</div>
+      <div>
+        <h2 class="auth-left-title">Turn your goals into<br/><span>real achievements.</span></h2>
+        <p class="auth-left-sub">The only vision board platform that breaks your year into structured phases and gives you AI coaching to keep going.</p>
+        <div class="auth-feats">
+          <div class="auth-feat"><div class="auth-feat-icon">🧠</div><span>AI Life Coach available 24/7</span></div>
+          <div class="auth-feat"><div class="auth-feat-icon">📋</div><span>Phased planning across your whole year</span></div>
+          <div class="auth-feat"><div class="auth-feat-icon">📸</div><span>Before & after transformation tracking</span></div>
+          <div class="auth-feat"><div class="auth-feat-icon">🌍</div><span>Works for any goal — fitness, finance, career</span></div>
+        </div>
+      </div>
+      <div class="auth-quote">
+        <p class="auth-quote-text">"I hit every Q1 goal I set. The phased approach is what makes this different from anything else."</p>
+        <div class="testi-author"><div class="auth-quote-av">M</div><div><p class="testi-name">Marcus T.</p><p class="testi-role">Entrepreneur</p></div></div>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-card">
+        <h1 class="auth-card-title" id="auth-title">Welcome back 👋</h1>
+        <p class="auth-card-sub" id="auth-sub">Sign in to access your vision boards.</p>
+        <div class="auth-toggle">
+          <button class="auth-tbtn active" id="btn-si" onclick="setMode('signin')">Sign In</button>
+          <button class="auth-tbtn" id="btn-su" onclick="setMode('signup')">Sign Up</button>
+        </div>
+        <button class="btn-google" onclick="googleAuth()">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div class="auth-div">or continue with email</div>
+        <div id="auth-error" class="auth-error" style="display:none"></div>
+        <div id="auth-success" class="auth-success" style="display:none"></div>
+        <form class="auth-form" onsubmit="submitAuth(event)">
+          <div class="auth-field" id="field-name" style="display:none">
+            <label class="auth-label">Full Name</label>
+            <input class="auth-input" id="inp-name" type="text" placeholder="Your name"/>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label">Email Address</label>
+            <input class="auth-input" id="inp-email" type="email" placeholder="you@example.com" required/>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label">Password <span class="auth-forgot" onclick="forgotPass()">Forgot password?</span></label>
+            <input class="auth-input" id="inp-pass" type="password" placeholder="Your password" required minlength="8"/>
+          </div>
+          <button class="btn-submit" type="submit" id="sub-btn">Sign In →</button>
+        </form>
+        <p class="auth-terms">By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="page-app" class="page">
+  <div class="vb-topbar">
+    <div class="vb-topbar-logo">Phasr</div>
+    <div class="vb-topbar-user">
+      <span id="user-email"></span>
+      <button class="btn-signout" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+  <div class="vb-root">
+    <div style="max-width:1200px;margin:0 auto;text-align:center;padding:3rem 1rem">
+      <p style="font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;color:#e8407a;margin-bottom:1rem">👑 Welcome to Phasr</p>
+      <p style="color:#7a5a66;font-size:1rem;margin-bottom:2rem">Your vision board loads here. You are signed in!</p>
+      <div id="app-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://fhqsvsswmzhjkszdpnet.supabase.co';
+const SUPA_KEY = 'sb_publishable_zbRozO2r8M0g1VR4ybtV3g_AXaC0vtY';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+window.addEventListener('scroll', () => {
+  const n = document.getElementById('nav');
+  if(n) n.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+const pills = document.querySelectorAll('.strip-pill');
+let ap = 0;
+setInterval(() => {
+  pills[ap].classList.remove('active');
+  ap = (ap + 1) % pills.length;
+  pills[ap].classList.add('active');
+}, 1800);
+
+let authMode = 'signin';
+function setMode(m) {
+  authMode = m;
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-success').style.display = 'none';
+  document.getElementById('btn-si').classList.toggle('active', m === 'signin');
+  document.getElementById('btn-su').classList.toggle('active', m === 'signup');
+  document.getElementById('auth-title').textContent = m === 'signin' ? 'Welcome back 👋' : 'Create your account ✨';
+  document.getElementById('auth-sub').textContent = m === 'signin' ? 'Sign in to access your vision boards.' : 'Free forever. No credit card required.';
+  document.getElementById('field-name').style.display = m === 'signup' ? 'flex' : 'none';
+  document.getElementById('sub-btn').textContent = m === 'signin' ? 'Sign In →' : 'Create Free Account →';
+}
+
+function showErr(msg) { const e = document.getElementById('auth-error'); e.textContent = '⚠️ ' + msg; e.style.display = 'block'; }
+function showOk(msg)  { const e = document.getElementById('auth-success'); e.textContent = '✅ ' + msg; e.style.display = 'block'; }
+
+async function submitAuth(e) {
+  e.preventDefault();
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-success').style.display = 'none';
+  const btn = document.getElementById('sub-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const email = document.getElementById('inp-email').value;
+  const pass  = document.getElementById('inp-pass').value;
+  if (authMode === 'signup') {
+    const name = document.getElementById('inp-name').value;
+    const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+    if (error) showErr(error.message);
+    else { showOk('Account created! Check your email to confirm, then sign in.'); setMode('signin'); }
+  } else {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) showErr(error.message);
+    else loadApp(data.user);
+  }
+  btn.disabled = false;
+  btn.textContent = authMode === 'signin' ? 'Sign In →' : 'Create Free Account →';
+}
+
+async function googleAuth() {
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  if (error) showErr(error.message);
+}
+
+async function forgotPass() {
+  const email = document.getElementById('inp-email').value;
+  if (!email) { showErr('Enter your email first.'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if (error) showErr(error.message);
+  else showOk('Password reset email sent!');
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  showPage('landing');
+}
+
+function loadApp(user) {
+  document.getElementById('user-email').textContent = user.email;
+  showPage('app');
+}
+
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) loadApp(session.user);
+});
+sb.auth.onAuthStateChange((_e, session) => {
+  if (session?.user) loadApp(session.user);
+  else showPage('landing');
+});
+</script>
+</body>
+</html>
